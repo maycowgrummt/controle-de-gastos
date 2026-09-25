@@ -1,0 +1,7 @@
+com\financeiro\gestao\model\Categoria.class
+com\financeiro\gestao\controller\TransacaoController.class
+com\financeiro\gestao\GestaoApplication.class
+com\financeiro\gestao\repository\CategoriaRepository.class
+com\financeiro\gestao\service\TransacaoService.class
+com\financeiro\gestao\model\Transacao.class
+com\financeiro\gestao\repository\TransacaoRepository.class

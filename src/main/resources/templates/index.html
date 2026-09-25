@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-main: #0f1016;
+            --bg-card: #171923;
+            --bg-header: #1e2130;
+            --border-color: #2d3748;
+            --primary-accent: #6b46c1;
+            --primary-hover: #553c9a;
+        }
+
+        body { 
+            background-color: var(--bg-main); 
+            color: #e2e8f0; 
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; 
+        }
+
+        .navbar { 
+            background: linear-gradient(135deg, #171923 0%, #0f1016 100%) !important; 
+            border-bottom: 1px solid var(--border-color) !important; 
+        }
+
+        .card { 
+            background-color: var(--bg-card); 
+            border: 1px solid var(--border-color); 
+            border-radius: 14px; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        .kpi-card {
+            border-left: 4px solid var(--primary-accent);
+            transition: transform 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+        .kpi-receita { border-left-color: #38a169; }
+        .kpi-despesa { border-left-color: #e53e3e; }
+        .kpi-saldo { border-left-color: #3182ce; }
+
+        .card-header-custom { 
+            background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%); 
+            color: white; 
+            font-weight: 600; 
+            border-top-left-radius: 13px !important; 
+            border-top-right-radius: 13px !important; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card-header-secondary-custom { 
+            background-color: var(--bg-header); 
+            border-top-left-radius: 13px !important; 
+            border-top-right-radius: 13px !important; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+
+        .form-control, .form-select { 
+            background-color: #111318;
+            border-color: var(--border-color);
+            color: #fff;
+        }
+
+        .form-control:focus, .form-select:focus { 
+            background-color: #111318; 
+            color: #fff; 
+            border-color: #805ad5; 
+            box-shadow: 0 0 0 0.25rem rgba(128, 90, 213, 0.25); 
+        }
+
+        .table-custom {
+            color: #e2e8f0;
+            margin-bottom: 0;
+            background-color: transparent;
+        }
+
+        .table-custom th {
+            background-color: #12141c;
+            color: #a0aec0;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-color);
+            padding: 1rem;
+            text-transform: uppercase;
+        }
+
+        .table-custom td {
+            background-color: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .table-custom tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .btn-purple-custom {
+            background-color: var(--primary-accent);
+            border-color: var(--primary-accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn-purple-custom:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: white;
+        }
+
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 320px; 
+            margin: auto; 
+            height: 260px; 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar refinada -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4 py-3 shadow-sm">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+            <div class="text-center text-md-start mb-2 mb-md-0">
+                <a class="navbar-brand fw-bold fs-4 text-decoration-none" href="#">💰 Controle de Gastos</a>
+                <div class="text-muted small mt-1" style="letter-spacing: 0.3px;">Organização financeira e controle prático para o seu dia a dia</div>
+            </div>
+            <div class="badge bg-dark bg-opacity-50 text-light border border-secondary px-3 py-2 rounded-pill small">
+                <i class="bi bi-shield-lock-fill text-purple me-1" style="color: #9f7aea;"></i> Dados Salvos no Aparelho
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+
+        <!-- Cards de Resumo Financeiro (KPIs) -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card kpi-card kpi-receita p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold d-block mb-1">RECEITAS (MÊS)</span>
+                            <h4 class="fw-bold text-success mb-0" id="kpiReceita">R$ 0,00</h4>
+                        </div>
+                        <div class="fs-2 text-success opacity-75"><i class="bi bi-arrow-down-circle"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card kpi-card kpi-despesa p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold d-block mb-1">DESPESAS (MÊS)</span>
+                            <h4 class="fw-bold text-danger mb-0" id="kpiDespesa">R$ 0,00</h4>
+                        </div>
+                        <div class="fs-2 text-danger opacity-75"><i class="bi bi-arrow-up-circle"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card kpi-card kpi-saldo p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold d-block mb-1">SALDO DO MÊS</span>
+                            <h4 class="fw-bold mb-0" id="kpiSaldo">R$ 0,00</h4>
+                        </div>
+                        <div class="fs-2 text-primary opacity-75"><i class="bi bi-wallet2"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário Nova / Editar Transação -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-custom py-3" id="formHeader">
+                        <i class="bi bi-plus-circle me-2"></i> Nova Transação
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="formTransacao" onsubmit="salvarTransacao(event)">
+                            <input type="hidden" id="transacaoId">
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="descricao" class="form-label text-muted small fw-bold">DESCRIÇÃO</label>
+                                    <input type="text" class="form-control" id="descricao" placeholder="Ex: Salário Mensal" required>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label for="valor" class="form-label text-muted small fw-bold">VALOR (R$)</label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="valor" placeholder="0.00" required>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label for="tipo" class="form-label text-muted small fw-bold">TIPO</label>
+                                    <select class="form-select" id="tipo" onchange="atualizarCategorias()" required>
+                                        <option value="DESPESA">Despesa</option>
+                                        <option value="RECEITA">Receita</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label for="categoria" class="form-label text-muted small fw-bold">CATEGORIA</label>
+                                    <select class="form-select" id="categoria" required>
+                                        <!-- Preenchido via JS conforme o Tipo -->
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label for="data" class="form-label text-muted small fw-bold">DATA</label>
+                                    <input type="date" class="form-control" id="data" required>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-4 gap-2">
+                                <button type="button" class="btn btn-outline-secondary px-4 d-none" id="btnCancelar" onclick="resetarFormulario()">Cancelar</button>
+                                <button type="submit" class="btn btn-purple-custom px-4" id="btnSalvar">Salvar Transação</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Extrato de Movimentações com Filtros e Pesquisa Rápida -->
+        <div class="card mb-4">
+            <div class="card-header card-header-secondary-custom text-white py-3">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-4">
+                        <span class="fw-bold"><i class="bi bi-list-ul me-2 text-info"></i> Extrato de Movimentações</span>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="d-flex flex-wrap justify-content-md-end gap-2 align-items-center">
+                            <!-- Campo de Pesquisa por Texto -->
+                            <div class="input-group input-group-sm w-auto" style="min-width: 200px;">
+                                <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" id="inputPesquisa" class="form-control form-control-sm" placeholder="Buscar categoria..." oninput="renderizarApp()">
+                            </div>
+                            
+                            <!-- Filtro de Mês -->
+                            <div class="d-flex gap-1 align-items-center">
+                                <label for="filtroMesExtrato" class="text-muted small text-nowrap mb-0">Mês:</label>
+                                <input type="month" id="filtroMesExtrato" class="form-control form-control-sm">
+                                <button class="btn btn-sm btn-outline-light text-nowrap px-2" type="button" onclick="limparFiltroMes()" title="Ver Todos"><i class="bi bi-x-circle"></i></button>
+                            </div>
+
+                            <!-- Botão Exportar -->
+                            <button class="btn btn-sm btn-success text-nowrap px-2" type="button" onclick="exportarParaCSV()" title="Exportar CSV"><i class="bi bi-file-earmark-excel me-1"></i> CSV</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Data</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Tipo</th>
+                                <th>Valor</th>
+                                <th class="text-end pe-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaTransacoes">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Gráficos -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-secondary-custom text-white d-flex flex-column flex-sm-row justify-content-between align-items-center py-3 gap-2">
+                        <span class="fw-bold" id="tituloGrafico"><i class="bi bi-pie-chart-fill me-2" style="color: #9f7aea;"></i> Distribuição de Despesas</span>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="date" id="filtroDataGrafico" class="form-control form-control-sm">
+                            <button class="btn btn-sm btn-outline-light text-nowrap px-3" type="button" onclick="limparFiltroGrafico()">Mês Todo</button>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center py-4">
+                        <div class="chart-container">
+                            <canvas id="graficoCategorias"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="text-center py-4 mt-auto text-muted small" style="border-top: 1px solid var(--border-color);">
+        <div class="container">
+            Controle de Gastos Diários — Desenvolvido por: <span class="text-light fw-medium">Maycow Grummt</span> | 
+            <a href="https://www.linkedin.com/in/maycow-grummt" target="_blank" class="text-decoration-none text-info ms-1">
+                <i class="bi bi-linkedin"></i> /maycow-grummt
+            </a>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script de Manipulação com LocalStorage e Chart.js -->
+    <script>
+        const coresCategorias = {
+            'Transporte': '#3182ce',
+            'Mercado': '#38a169',
+            'Padaria': '#d69e2e',
+            'Lazer': '#00b5d8',
+            'Investimento': '#805ad5',
+            'Contas Fixas': '#e53e3e',
+            'Contas Variadas': '#dd6b20',
+            'Salário': '#48bb78',
+            'Uber / Frete': '#319795',
+            'Vendas': '#ecc94b',
+            'Outras Receitas': '#4299e1'
+        };
+
+        const categoriasPorTipo = {
+            'DESPESA': ['Transporte', 'Mercado', 'Padaria', 'Lazer', 'Investimento', 'Contas Fixas', 'Contas Variadas'],
+            'RECEITA': ['Salário', 'Uber / Frete', 'Vendas', 'Outras Receitas']
+        };
+
+        let meuGrafico = null;
+
+        function atualizarCategorias(categoriaSelecionada = '') {
+            const tipo = document.getElementById('tipo').value;
+            const selectCategoria = document.getElementById('categoria');
+            selectCategoria.innerHTML = '';
+
+            const lista = categoriasPorTipo[tipo] || [];
+            lista.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                if (cat === categoriaSelecionada) {
+                    option.selected = true;
+                }
+                selectCategoria.appendChild(option);
+            });
+        }
+
+        function obterTransacoes() {
+            const dados = localStorage.getItem('transacoes_gastos');
+            return dados ? JSON.parse(dados) : [];
+        }
+
+        function salvarNoStorage(transacoes) {
+            localStorage.setItem('transacoes_gastos', JSON.stringify(transacoes));
+        }
+
+        document.getElementById('data').valueAsDate = new Date();
+        const hoje = new Date();
+        const anoAtual = hoje.getFullYear();
+        const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+        document.getElementById('filtroMesExtrato').value = `${anoAtual}-${mesAtual}`;
+        atualizarCategorias();
+
+        function obterTransacoesFiltradas() {
+            const transacoes = obterTransacoes();
+            const filtroMes = document.getElementById('filtroMesExtrato').value;
+            const termoBusca = document.getElementById('inputPesquisa').value.toLowerCase().trim();
+            
+            return transacoes.filter(t => {
+                // Filtro por mês
+                const passaMes = !filtroMes || (t.data && t.data.startsWith(filtroMes));
+                
+                // Filtro por termo de busca (descrição ou categoria)
+                const passaBusca = !termoBusca || 
+                    (t.descricao && t.descricao.toLowerCase().includes(termoBusca)) || 
+                    (t.categoria && t.categoria.toLowerCase().includes(termoBusca));
+
+                return passaMes && passaBusca;
+            });
+        }
+
+        function renderizarApp() {
+            const tbody = document.getElementById('tabelaTransacoes');
+            const transacoesFiltradas = obterTransacoesFiltradas();
+            tbody.innerHTML = '';
+
+            let totalReceitas = 0;
+            let totalDespesas = 0;
+
+            transacoesFiltradas.forEach(t => {
+                const val = Number(t.valor) || 0;
+                if (t.tipo === 'RECEITA') {
+                    totalReceitas += val;
+                } else if (t.tipo === 'DESPESA') {
+                    totalDespesas += val;
+                }
+            });
+
+            const saldoMes = totalReceitas - totalDespesas;
+
+            document.getElementById('kpiReceita').innerText = totalReceitas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('kpiDespesa').innerText = totalDespesas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            const kpiSaldoEl = document.getElementById('kpiSaldo');
+            kpiSaldoEl.innerText = saldoMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            kpiSaldoEl.className = `fw-bold mb-0 ${saldoMes >= 0 ? 'text-success' : 'text-danger'}`;
+
+            if (transacoesFiltradas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted fst-italic">Nenhuma transação encontrada com os critérios informados.</td></tr>`;
+            } else {
+                transacoesFiltradas.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+                transacoesFiltradas.forEach(t => {
+                    const dataFormatada = t.data.split('-').reverse().join('/');
+                    const valorFormatado = Number(t.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    const badgeClass = t.tipo === 'RECEITA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25';
+                    const textClass = t.tipo === 'RECEITA' ? 'text-success' : 'text-danger';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="ps-4 fw-medium text-muted">${dataFormatada}</td>
+                        <td class="fw-semibold text-light">${t.descricao}</td>
+                        <td><span class="badge bg-dark border border-secondary text-light fw-normal px-2 py-1">${t.categoria}</span></td>
+                        <td><span class="badge rounded-pill px-2 py-1 ${badgeClass}">${t.tipo}</span></td>
+                        <td class="fw-bold ${textClass}">${valorFormatado}</td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-outline-warning me-1 px-2 py-1" onclick="carregarParaEdicao(${t.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger px-2 py-1" onclick="excluirTransacao(${t.id})" title="Excluir"><i class="bi bi-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            atualizarGrafico();
+        }
+
+        function salvarTransacao(event) {
+            event.preventDefault();
+            const id = document.getElementById('transacaoId').value;
+            const descricao = document.getElementById('descricao').value;
+            const valor = parseFloat(document.getElementById('valor').value);
+            const tipo = document.getElementById('tipo').value;
+            const categoria = document.getElementById('categoria').value;
+            const data = document.getElementById('data').value;
+
+            let transacoes = obterTransacoes();
+
+            if (id) {
+                transacoes = transacoes.map(t => t.id == id ? { id: Number(id), descricao, valor, tipo, categoria, data } : t);
+            } else {
+                const novaTransacao = {
+                    id: Date.now(),
+                    descricao,
+                    valor,
+                    tipo,
+                    categoria,
+                    data
+                };
+                transacoes.push(novaTransacao);
+            }
+
+            salvarNoStorage(transacoes);
+            resetarFormulario();
+            renderizarApp();
+        }
+
+        function carregarParaEdicao(id) {
+            const transacoes = obterTransacoes();
+            const t = transacoes.find(item => item.id == id);
+            if (!t) return;
+
+            document.getElementById('transacaoId').value = t.id;
+            document.getElementById('descricao').value = t.descricao;
+            document.getElementById('valor').value = t.valor;
+            document.getElementById('tipo').value = t.tipo;
+            atualizarCategorias(t.categoria);
+            document.getElementById('data').value = t.data;
+
+            document.getElementById('formHeader').innerHTML = `<i class="bi bi-pencil-square me-2"></i> Editar Transação`;
+            document.getElementById('btnSalvar').innerText = "Atualizar Transação";
+            document.getElementById('btnCancelar').classList.remove('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function excluirTransacao(id) {
+            if (confirm('Deseja excluir esta transação?')) {
+                let transacoes = obterTransacoes();
+                transacoes = transacoes.filter(t => t.id != id);
+                salvarNoStorage(transacoes);
+                renderizarApp();
+            }
+        }
+
+        function resetarFormulario() {
+            document.getElementById('formTransacao').reset();
+            document.getElementById('transacaoId').value = '';
+            document.getElementById('data').valueAsDate = new Date();
+            document.getElementById('tipo').value = 'DESPESA';
+            atualizarCategorias();
+            document.getElementById('formHeader').innerHTML = `<i class="bi bi-plus-circle me-2"></i> Nova Transação`;
+            document.getElementById('btnSalvar').innerText = "Salvar Transação";
+            document.getElementById('btnCancelar').classList.add('d-none');
+        }
+
+        function limparFiltroMes() {
+            document.getElementById('filtroMesExtrato').value = '';
+            document.getElementById('inputPesquisa').value = '';
+            renderizarApp();
+        }
+
+        function exportarParaCSV() {
+            const transacoesFiltradas = obterTransacoesFiltradas();
+            if (transacoesFiltradas.length === 0) {
+                alert("Não há transações para exportar com os filtros atuais.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,ID;Data;Descricao;Categoria;Tipo;Valor\n";
+
+            transacoesFiltradas.forEach(t => {
+                const linha = [
+                    t.id,
+                    t.data,
+                    `"${t.descricao}"`,
+                    `"${t.categoria}"`,
+                    t.tipo,
+                    t.valor
+                ].join(";");
+                csvContent += linha + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            const filtroMes = document.getElementById('filtroMesExtrato').value || 'geral';
+            link.setAttribute("download", `extrato_financeiro_${filtroMes}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function atualizarGrafico(filtroData = null) {
+            const transacoes = obterTransacoes();
+            const filtroMes = document.getElementById('filtroMesExtrato').value;
+            
+            let dadosFiltrados = transacoes;
+            if (filtroMes) {
+                dadosFiltrados = transacoes.filter(t => t.data && t.data.startsWith(filtroMes));
+            }
+
+            let titulo = filtroMes ? `Despesas por Categoria (${filtroMes.split('-').reverse().join('/')})` : "Distribuição de Despesas Geral";
+
+            const dataFiltroInput = filtroData || document.getElementById('filtroDataGrafico').value;
+
+            if (dataFiltroInput) {
+                dadosFiltrados = dadosFiltrados.filter(t => t.data === dataFiltroInput);
+                titulo = `Despesas do Dia: ${dataFiltroInput.split('-').reverse().join('/')}`;
+            }
+
+            document.getElementById('tituloGrafico').innerHTML = `<i class="bi bi-pie-chart-fill me-2" style="color: #9f7aea;"></i> ${titulo}`;
+
+            const totais = {};
+            dadosFiltrados.forEach(t => {
+                if (t.tipo === 'DESPESA' && t.categoria && t.valor) {
+                    totais[t.categoria] = (totais[t.categoria] || 0) + t.valor;
+                }
+            });
+
+            const labels = Object.keys(totais);
+            const dataValues = Object.values(totais);
+            const backgroundColors = labels.map(cat => coresCategorias[cat] || '#4a5568');
+
+            const ctx = document.getElementById('graficoCategorias').getContext('2d');
+            
+            if (meuGrafico) {
+                meuGrafico.destroy();
+            }
+
+            meuGrafico = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 2,
+                        borderColor: '#171923'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#e2e8f0', boxWidth: 12, font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('filtroMesExtrato').addEventListener('change', function() {
+            renderizarApp();
+        });
+
+        document.getElementById('filtroDataGrafico').addEventListener('change', function(e) {
+            atualizarGrafico(e.target.value);
+        });
+
+        function limparFiltroGrafico() {
+            document.getElementById('filtroDataGrafico').value = '';
+            atualizarGrafico(null);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderizarApp();
+        });
+    </script>
+</body>
+</html>
